@@ -1,9 +1,19 @@
 [package]
 name = "filecmp"
-version = "0.0.2"
+version = "0.1.0"
 authors = ["owtotwo <owtotwo@163.com>"]
 license = "LGPL-3.0-only"
-description = "(Work-In-Progress) Utilities for comparing files and directories, the rust implementation for CPython filecmp module."
+description = "Utilities for comparing files and directories, the rust implementation for CPython filecmp module."
 edition = "2018"
 
 [dependencies]
+lazy_static = "1.4.0"
+
+[lib]
+name = "filecmp"
+
+[[example]]
+name = "filecmp"
+
+[dev-dependencies]
+clap = "2"
