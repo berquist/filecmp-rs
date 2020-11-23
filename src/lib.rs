@@ -220,20 +220,27 @@ impl Hash for Signature {
 mod tests {
     use super::*;
     use std::env;
-    use std::fs::File;
+    use std::fs::{self, File};
     use std::io::Write;
 
     #[test]
     fn test_stat() {
         let temp_dir = env::temp_dir();
+        let test_dir = dbg!(temp_dir.join("test_filecmp").join("test_stat"));
 
-        let mut foo_path = temp_dir.clone();
-        let mut bar_path = temp_dir.clone();
-        let mut baz_path = temp_dir.clone();
+        if !test_dir.exists() {
+            fs::create_dir_all(&test_dir).unwrap();
+        }
 
-        foo_path.push("foo.txt");
-        bar_path.push("bar.txt");
-        baz_path.push("baz.txt");
+        assert!(
+            test_dir.is_dir(),
+            "Test directory {} must be an existed folder",
+            test_dir.display()
+        );
+
+        let foo_path = test_dir.join("foo.txt");
+        let bar_path = test_dir.join("bar.txt");
+        let baz_path = test_dir.join("baz.txt");
 
         let mut foo = File::create(&foo_path).unwrap(); // b"0123456789abcdeg"
         let mut bar = File::create(&bar_path).unwrap(); // b"0123456789abcdeg"

@@ -7,7 +7,7 @@ use std::time::SystemTime;
 pub use nt::stat;
 
 #[cfg(unix)]
-pub use nt::stat;
+pub use posix::stat;
 
 #[derive(Debug)]
 pub struct StatResult {
@@ -92,7 +92,6 @@ mod posix {
         #[cfg(target_os = "redox")]
         use std::os::redox::fs::MetadataExt;
 
-        let p = path.as_ref();
         let meta = fs_metadata(path, follow_symlinks)?;
 
         Ok(StatResult {
@@ -134,20 +133,27 @@ fn to_seconds_from_unix_epoch(sys_time: SystemTime) -> f64 {
 mod tests {
     use super::*;
     use std::env;
-    use std::fs::File;
+    use std::fs::{self, File};
     use std::io::Write;
 
     #[test]
     fn test_stat() {
         let temp_dir = env::temp_dir();
+        let test_dir = dbg!(temp_dir.join("test_filecmp").join("test_stat"));
 
-        let mut foo_path = temp_dir.clone();
-        let mut bar_path = temp_dir.clone();
-        let mut baz_path = temp_dir.clone();
+        if !test_dir.exists() {
+            fs::create_dir_all(&test_dir).unwrap();
+        }
 
-        foo_path.push("foo.txt");
-        bar_path.push("bar.txt");
-        baz_path.push("baz.txt");
+        assert!(
+            test_dir.is_dir(),
+            "Test directory {} must be an existed folder",
+            test_dir.display()
+        );
+
+        let foo_path = test_dir.join("foo.txt");
+        let bar_path = test_dir.join("bar.txt");
+        let baz_path = test_dir.join("baz.txt");
 
         let mut foo = File::create(&foo_path).unwrap();
         let mut bar = File::create(&bar_path).unwrap();
@@ -161,9 +167,10 @@ mod tests {
         bar.write(buf).unwrap();
         baz.write(buf_digit).unwrap();
 
-        let foo_stat = stat(&foo_path, false).unwrap();
-        let bar_stat = stat(&bar_path, false).unwrap();
-        let baz_stat = stat(&baz_path, false).unwrap();
+        let _test_dir_stat = dbg!(stat(&test_dir, false).unwrap());
+        let foo_stat = dbg!(stat(&foo_path, false).unwrap());
+        let bar_stat = dbg!(stat(&bar_path, false).unwrap());
+        let baz_stat = dbg!(stat(&baz_path, false).unwrap());
 
         // for st_mode
         assert_eq!(foo_stat.st_mode, bar_stat.st_mode);
