@@ -1,3 +1,25 @@
+//! Implementation of os.stat() in Python3 std-lib.
+//!
+//! Note: `st_ino`, `st_dev`, `st_nlink` field in StatResult are pointless in Windows now.
+//!
+//! Functions like in Python3 std-lib:
+//!  - cmp(f1, f2, shallow: bool) -> int
+//!  - cmpfiles(a, b, common) -> ([], [], [])
+//!  - clear_cache()
+//!
+//! # Example
+//!
+//! ```ignore
+//! use std::env;
+//! use filecmp::os; // now private
+//! 
+//! let temp_dir = env::temp_dir();
+//! let follow_symlinks = false;
+//! let stat = os::stat(&temp_dir, follow_symlinks).unwrap();
+//! 
+//! println!("{:?}", stat);
+//! ```
+
 use std::fs::{self};
 use std::io::{self};
 use std::path::Path;

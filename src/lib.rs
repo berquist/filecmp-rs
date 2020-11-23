@@ -1,13 +1,16 @@
-//! Utilities for comparing files and directories.
+//! Utilities for comparing files and directories(WIP).
 //!
-//! Struct:
-//!     DirCmp
+//! Struct like in Python3 std-lib:
+//!  - DirCmp
 //!
-//! Functions:
-//!     cmp(f1, f2, shallow=True) -> int
-//!     cmpfiles(a, b, common) -> ([], [], [])
-//!     clear_cache()
+//! Functions like in Python3 std-lib:
+//!  - cmp(f1, f2, shallow: bool) -> int
+//!  - cmpfiles(a, b, common) -> ([], [], [])
+//!  - clear_cache()
 //!
+//! # Example
+//!
+//! Check out [Example for cmp()](cmp#example)
 
 mod os;
 mod stat;
@@ -37,18 +40,49 @@ pub fn clear_cache() {
 
 /// Compare two files.
 ///
-///   Arguments:
-///     f1 -- First file name
-///     f2 -- Second file name
-///     shallow -- Just check stat signature (do not read the files).
-///                defaults to True.
+/// Arguments:
+///  - f1 -- First file name
+///  - f2 -- Second file name
+///  - shallow -- Just check stat signature (do not read the files).
 ///
-///   Return value:
-///     True if the files are the same, False otherwise.
+/// Return value:
+///  - True if the files are the same, False otherwise.
 ///
-///   This function uses a cache for past comparisons and the results,
-///     with cache entries invalidated if their stat information
-///     changes.  The cache may be cleared by calling clear_cache().
+/// This function uses a cache for past comparisons and the results,
+/// with cache entries invalidated if their stat information
+/// changes.  The cache may be cleared by calling clear_cache().
+///
+/// # Example
+///
+/// ```rust
+/// use std::env;
+/// use std::io::Write;
+/// use std::fs::File;
+/// use filecmp;
+///
+/// let temp_dir = env::temp_dir();
+/// let foo_path = temp_dir.join("foo.txt");
+/// let bar_path = temp_dir.join("bar.txt");
+/// let baz_path = temp_dir.join("baz.txt");
+///
+/// { // Create files in temporary directory
+///     let mut foo = File::create(&foo_path).unwrap();
+///     let mut bar = File::create(&bar_path).unwrap();
+///     let mut baz = File::create(&baz_path).unwrap();
+///
+///     foo.write_all(b"hello filecmp!").unwrap();
+///     bar.write_all(b"hello filecmp!").unwrap();
+///     baz.write_all(b"hello world!").unwrap();
+/// } // Close them
+///
+/// let a = filecmp::cmp(&foo_path, &bar_path, true).unwrap();
+/// let b = filecmp::cmp(&foo_path, &baz_path, true).unwrap();
+/// let c = filecmp::cmp(&bar_path, &baz_path, true).unwrap();
+/// 
+/// assert!(a);
+/// assert!(!b);
+/// assert!(!c);
+/// ```
 ///
 pub fn cmp(f1: impl AsRef<Path>, f2: impl AsRef<Path>, shallow: bool) -> io::Result<bool> {
     let s1 = sig(os::stat(f1.as_ref(), FOLLOW_SYMLINKS_DEFAULT)?);
@@ -82,17 +116,18 @@ pub fn cmp(f1: impl AsRef<Path>, f2: impl AsRef<Path>, shallow: bool) -> io::Res
     Ok(outcome)
 }
 
-/// Compare common files in two directories.
+/// Compare common files in two directories. (WIP)
 ///
-/// dir1, dir2 -- directory names
-/// common -- list of file names found in both directories
-/// shallow -- if true, do comparison based solely on stat() information
+/// Arguments:
+///  - dir1 -- First directory name
+///  - dir2 -- Second directory name
+///  - common -- list of file names found in both directories
+///  - shallow -- if true, do comparison based solely on stat() information
 ///
 /// Returns a tuple of three lists:
-///   files that compare equal
-///   files that are different
-///   filenames that aren't regular files.
-///
+///  - filepaths that compare equal
+///  - filepaths that are different
+///  - filepaths that aren't regular files.
 pub fn cmpfiles<A, B, C, D>(
     _dir1: A,
     _dir2: B,
@@ -105,55 +140,49 @@ where
     C: AsRef<Path>,
     D: AsRef<[C]>,
 {
-    unimplemented!()
+    unimplemented!() // TODO
 }
 
-/// A struct that manages the comparison of 2 directories.
+/// A struct that manages the comparison of 2 directories. (WIP)
 ///
-/// dircmp(a, b, ignore=None, hide=None)
-///   A and B are directories.
-///   IGNORE is a list of names to ignore,
-///     defaults to DEFAULT_IGNORES.
-///   HIDE is a list of names to hide,
-///     defaults to [os.curdir, os.pardir].
+/// dircmp(a, b, ignore, hide)
+/// A and B are directories.
+/// IGNORE is a list of names to ignore, defaults to DEFAULT_IGNORES.
+/// HIDE is a list of names to hide, defaults to [os.curdir, os.pardir].
 ///
 /// High level usage:
-///   x = dircmp(dir1, dir2)
-///   x.report() -> prints a report on the differences between dir1 and dir2
-///    or
-///   x.report_partial_closure() -> prints report on differences between dir1
-///         and dir2, and reports on common immediate subdirectories.
-///   x.report_full_closure() -> like report_partial_closure,
-///         but fully recursive.
+///  + x = dircmp(dir1, dir2)
+///    - x.report() -> prints a report on the differences between dir1 and dir2
+///      or
+///    - x.report_partial_closure() -> prints report on differences between dir1
+///      and dir2, and reports on common immediate subdirectories.
+///    - x.report_full_closure() -> like report_partial_closure, but fully recursive.
 ///
 /// Attributes:
-///  left_list, right_list: The files in dir1 and dir2,
-///     filtered by hide and ignore.
-///  common: a list of names in both dir1 and dir2.
-///  left_only, right_only: names only in dir1, dir2.
-///  common_dirs: subdirectories in both dir1 and dir2.
-///  common_files: files in both dir1 and dir2.
-///  common_funny: names in both dir1 and dir2 where the type differs between
-///     dir1 and dir2, or the name is not stat-able.
-///  same_files: list of identical files.
-///  diff_files: list of filenames which differ.
-///  funny_files: list of files which could not be compared.
-///  subdirs: a dictionary of dircmp objects, keyed by names in common_dirs.
-///
+///  - left_list, right_list: The files in dir1 and dir2, filtered by hide and ignore.
+///  - common: a list of names in both dir1 and dir2.
+///  - left_only, right_only: names only in dir1, dir2.
+///  - common_dirs: subdirectories in both dir1 and dir2.
+///  - common_files: files in both dir1 and dir2.
+///  - common_funny: names in both dir1 and dir2 where the type differs between dir1 and dir2, or the name is not stat-able.
+///  - same_files: list of identical files.
+///  - diff_files: list of filenames which differ.
+///  - funny_files: list of files which could not be compared.
+///  - subdirs: a dictionary of dircmp objects, keyed by names in common_dirs.
 pub struct DirCmp;
 
 impl DirCmp {
     // TODO
     pub fn new(_a: impl AsRef<Path>, _b: impl AsRef<Path>) -> Self {
-        unimplemented!()
+        unimplemented!() // TODO
     }
 
     pub fn report_full_closure(&self) {
-        unimplemented!()
+        unimplemented!() // TODO
     }
 
     pub fn report(&self) {
-        unimplemented!()
+        unimplemented!() // TODO
     }
 }
 
