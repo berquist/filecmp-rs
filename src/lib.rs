@@ -55,12 +55,12 @@ pub fn clear_cache() {
 /// # Example
 ///
 /// ```rust
-/// use std::env;
 /// use std::io::Write;
 /// use std::fs::File;
+/// use tempfile;
 /// use filecmp;
 ///
-/// let temp_dir = env::temp_dir();
+/// let temp_dir = tempfile::tempdir().unwrap().into_path();
 /// let foo_path = temp_dir.join("foo.txt");
 /// let bar_path = temp_dir.join("bar.txt");
 /// let baz_path = temp_dir.join("baz.txt");
@@ -78,7 +78,7 @@ pub fn clear_cache() {
 /// let a = filecmp::cmp(&foo_path, &bar_path, true).unwrap();
 /// let b = filecmp::cmp(&foo_path, &baz_path, true).unwrap();
 /// let c = filecmp::cmp(&bar_path, &baz_path, true).unwrap();
-/// 
+///
 /// assert!(a);
 /// assert!(!b);
 /// assert!(!c);
@@ -248,13 +248,13 @@ impl Hash for Signature {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
     use std::fs::{self, File};
     use std::io::Write;
+    use tempfile;
 
     #[test]
     fn test_stat() {
-        let temp_dir = env::temp_dir();
+        let temp_dir = tempfile::tempdir().unwrap().into_path();
         let test_dir = dbg!(temp_dir.join("test_filecmp").join("test_stat"));
 
         if !test_dir.exists() {
@@ -263,7 +263,7 @@ mod tests {
 
         assert!(
             test_dir.is_dir(),
-            "Test directory {} must be an existed folder",
+            "Test directory {} must be an existing folder",
             test_dir.display()
         );
 

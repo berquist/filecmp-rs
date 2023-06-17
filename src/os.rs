@@ -9,14 +9,14 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use std::env;
+//! ```rust
+//! use tempfile;
 //! use filecmp::os; // now private
-//! 
-//! let temp_dir = env::temp_dir();
+//!
+//! let temp_dir = tempfile::tempdir().unwrap().into_path();
 //! let follow_symlinks = false;
 //! let stat = os::stat(&temp_dir, follow_symlinks).unwrap();
-//! 
+//!
 //! println!("{:?}", stat);
 //! ```
 
@@ -154,13 +154,13 @@ fn to_seconds_from_unix_epoch(sys_time: SystemTime) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
     use std::fs::{self, File};
     use std::io::Write;
+    use tempfile;
 
     #[test]
     fn test_stat() {
-        let temp_dir = env::temp_dir();
+        let temp_dir = tempfile::tempdir().unwrap().into_path();
         let test_dir = dbg!(temp_dir.join("test_filecmp").join("test_stat"));
 
         if !test_dir.exists() {
@@ -169,7 +169,7 @@ mod tests {
 
         assert!(
             test_dir.is_dir(),
-            "Test directory {} must be an existed folder",
+            "Test directory {} must be an existing folder",
             test_dir.display()
         );
 
