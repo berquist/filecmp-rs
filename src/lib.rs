@@ -60,7 +60,8 @@ pub fn clear_cache() {
 /// use tempfile;
 /// use filecmp;
 ///
-/// let temp_dir = tempfile::tempdir().unwrap().into_path();
+/// let td = tempfile::tempdir().unwrap();
+/// let temp_dir = td.path().to_path_buf();
 /// let foo_path = temp_dir.join("foo.txt");
 /// let bar_path = temp_dir.join("bar.txt");
 /// let baz_path = temp_dir.join("baz.txt");
@@ -82,6 +83,8 @@ pub fn clear_cache() {
 /// assert!(a);
 /// assert!(!b);
 /// assert!(!c);
+///
+/// td.close().unwrap();
 /// ```
 ///
 pub fn cmp(f1: impl AsRef<Path>, f2: impl AsRef<Path>, shallow: bool) -> io::Result<bool> {
@@ -252,20 +255,27 @@ mod tests {
     use std::io::Write;
     use tempfile;
 
-    #[test]
-    fn test_stat() {
-        let temp_dir = tempfile::tempdir().unwrap().into_path();
-        let test_dir = dbg!(temp_dir.join("test_filecmp").join("test_stat"));
-
-        if !test_dir.exists() {
-            fs::create_dir_all(&test_dir).unwrap();
+    fn create_and_verify(root: &PathBuf, name: &str) -> PathBuf {
+        let new_dir = dbg!(root.join(name));
+        if !new_dir.exists() {
+            fs::create_dir_all(&new_dir).unwrap();
         }
 
         assert!(
-            test_dir.is_dir(),
-            "Test directory {} must be an existing folder",
-            test_dir.display()
+            new_dir.is_dir(),
+            "New directory {} must be an existing folder",
+            new_dir.display()
         );
+
+        new_dir
+    }
+
+    #[test]
+    fn test_stat() {
+        let td = tempfile::tempdir().unwrap();
+        let temp_dir = td.path().to_path_buf();
+        let test_dir = temp_dir.join("test_filecmp");
+        let test_dir = create_and_verify(&test_dir, "test_stat");
 
         let foo_path = test_dir.join("foo.txt");
         let bar_path = test_dir.join("bar.txt");
@@ -300,5 +310,7 @@ mod tests {
         assert!(cmp(&foo_path, &bar_path, shallow).unwrap());
         assert!(!cmp(&foo_path, &baz_path, shallow).unwrap());
         assert!(!cmp(&bar_path, &baz_path, shallow).unwrap());
+
+        td.close().unwrap();
     }
 }

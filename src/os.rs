@@ -9,19 +9,22 @@
 //!
 //! # Example
 //!
-//! ```rust
+//! ```ignore
 //! use tempfile;
 //! use filecmp::os; // now private
 //!
-//! let temp_dir = tempfile::tempdir().unwrap().into_path();
+//! let td = tempfile::tempdir().unwrap();
+//! let temp_dir = td.path().to_path_buf();
 //! let follow_symlinks = false;
 //! let stat = os::stat(&temp_dir, follow_symlinks).unwrap();
 //!
 //! println!("{:?}", stat);
+//!
+//! td.close().unwrap();
 //! ```
 
-use std::fs::{self};
-use std::io::{self};
+use std::fs;
+use std::io;
 use std::path::Path;
 use std::time::SystemTime;
 
@@ -160,7 +163,8 @@ mod tests {
 
     #[test]
     fn test_stat() {
-        let temp_dir = tempfile::tempdir().unwrap().into_path();
+        let td = tempfile::tempdir().unwrap();
+        let temp_dir = td.path().to_path_buf();
         let test_dir = dbg!(temp_dir.join("test_filecmp").join("test_stat"));
 
         if !test_dir.exists() {
@@ -201,5 +205,7 @@ mod tests {
         // for st_size
         assert_eq!(foo_stat.st_size, bar_stat.st_size);
         assert_ne!(foo_stat.st_size, baz_stat.st_size);
+
+        td.close().unwrap();
     }
 }
