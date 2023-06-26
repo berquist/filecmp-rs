@@ -27,6 +27,18 @@ use lazy_static::lazy_static;
 const BUFSIZE: usize = 8 * 1024;
 const FOLLOW_SYMLINKS_DEFAULT: bool = true;
 const MAX_CACHE_SIZE: usize = 100;
+const DEFAULT_IGNORES: [&str; 8] = [
+    "RCS",
+    "CVS",
+    "tags",
+    ".git",
+    ".hg",
+    ".bzr",
+    "_darcs",
+    "__pycache__",
+];
+const CURDIR: &str = ".";
+const PARDIR: &str = "..";
 
 lazy_static! {
     /// Cache for File Comparison
@@ -146,7 +158,7 @@ where
     unimplemented!() // TODO
 }
 
-/// A struct that manages the comparison of 2 directories. (WIP)
+/// A struct that manages the comparison of 2 directories.
 ///
 /// dircmp(a, b, ignore, hide)
 /// A and B are directories.
@@ -172,21 +184,140 @@ where
 ///  - diff_files: list of filenames which differ.
 ///  - funny_files: list of files which could not be compared.
 ///  - subdirs: a dictionary of dircmp objects, keyed by names in common_dirs.
-pub struct DirCmp;
+pub struct DirCmp {
+    left: PathBuf,
+    right: PathBuf,
+    // hide: Vec<PathBuf>,
+    // ignore: Vec<PathBuf>,
+    left_list: Vec<PathBuf>,
+    right_list: Vec<PathBuf>,
+    common: Vec<String>,
+    left_only: Vec<String>,
+    right_only: Vec<String>,
+    common_dirs: Vec<String>,
+    // common_files: Vec<PathBuf>,
+    // common_funny: Vec<PathBuf>,
+    // same_files: Vec<PathBuf>,
+    // diff_files: Vec<PathBuf>,
+    // funny_files: Vec<PathBuf>,
+    // subdirs: Vec<PathBuf>,
+}
 
 impl DirCmp {
-    // TODO
-    pub fn new(_a: impl AsRef<Path>, _b: impl AsRef<Path>) -> Self {
-        unimplemented!() // TODO
+    pub fn new(
+        left: impl AsRef<Path>,
+        right: impl AsRef<Path>,
+        // ignore: Option<Vec<String>>,
+        // hide: Option<Vec<String>>,
+    ) -> Self {
+        let left = left.as_ref().to_path_buf();
+        let right = right.as_ref().to_path_buf();
+        // let ignore = if ignore.is_some() {
+        //     ignore.unwrap().iter().map(|x| PathBuf::from(x)).collect()
+        // } else {
+        //     DEFAULT_IGNORES.iter().map(|&x| PathBuf::from(x)).collect()
+        // };
+        // let hide = if hide.is_some() {
+        //     hide.unwrap().iter().map(|x| PathBuf::from(x)).collect()
+        // } else {
+        //     vec![CURDIR, PARDIR]
+        //         .iter()
+        //         .map(|&x| PathBuf::from(x))
+        //         .collect()
+        // };
+        // let ignore = DEFAULT_IGNORES.iter().map(|&x| PathBuf::from(x)).collect();
+        // let hide = vec![CURDIR, PARDIR]
+        //     .iter()
+        //     .map(|&x| PathBuf::from(x))
+        //     .collect();
+        let ignore = DEFAULT_IGNORES.iter().map(|&x| x).collect::<Vec<_>>();
+        let hide = vec![CURDIR, PARDIR];
+        let mut left_list_full: Vec<_> = left
+            .read_dir()
+            .unwrap()
+            .map(|der| der.unwrap().path())
+            .filter(|der| !ignore.contains(der.file_name().unwrap().to_str().as_ref().unwrap()))
+            .filter(|der| !hide.contains(der.file_name().unwrap().to_str().as_ref().unwrap()))
+            .collect();
+        left_list_full.sort();
+        let mut right_list_full: Vec<_> = right
+            .read_dir()
+            .unwrap()
+            .map(|der| der.unwrap().path())
+            .filter(|der| !ignore.contains(der.file_name().unwrap().to_str().as_ref().unwrap()))
+            .filter(|der| !hide.contains(der.file_name().unwrap().to_str().as_ref().unwrap()))
+            .collect();
+        right_list_full.sort();
+        let left_names = left_list_full
+            .iter()
+            .map(|pb| String::from(pb.strip_prefix(&left).unwrap().to_str().unwrap()))
+            .collect::<Vec<_>>();
+        let right_names = right_list_full
+            .iter()
+            .map(|pb| String::from(pb.strip_prefix(&right).unwrap().to_str().unwrap()))
+            .collect::<Vec<_>>();
+        let common = left_names
+            .iter()
+            .filter(|&ln| right_names.contains(ln))
+            .map(|n| n.clone())
+            .collect::<Vec<_>>();
+        let left_only = left_names
+            .iter()
+            .filter(|name| !common.contains(name))
+            .map(|n| n.clone())
+            .collect::<Vec<_>>();
+        let right_only = right_names
+            .iter()
+            .filter(|name| !common.contains(name))
+            .map(|n| n.clone())
+            .collect::<Vec<_>>();
+        // for x in &common {
+        //     let a_path = left.join(x);
+        // }
+        // let stats_left = left_list_full
+        //     .iter()
+        //     .map(|pb| os::stat(pb.as_ref(), FOLLOW_SYMLINKS_DEFAULT).unwrap())
+        //     .collect::<Vec<_>>();
+        let common_dirs = common
+            .iter()
+            .filter(|name| left.join(name).is_dir() && right.join(name).is_dir())
+            .map(|n| n.clone())
+            .collect::<Vec<_>>();
+        DirCmp {
+            left,
+            right,
+            // hide,
+            // ignore,
+            left_list: left_list_full,
+            right_list: right_list_full,
+            common,
+            left_only,
+            right_only,
+            common_dirs,
+        }
     }
 
+    // fn strip_prefix(v: &Vec<PathBuf>, prefix: &Path) -> Vec<&str> {
+    //     v.iter()
+    //         .map(|&pb| pb.strip_prefix(prefix).unwrap().to_str().unwrap())
+    //         .collect::<Vec<_>>();
+    // }
+
     pub fn report_full_closure(&self) {
-        unimplemented!() // TODO
+        unimplemented!()
     }
 
     pub fn report(&self) {
-        unimplemented!() // TODO
+        unimplemented!()
     }
+}
+
+fn filter<T: Eq + Clone>(flist: &Vec<T>, skip: &Vec<T>) -> Vec<T> {
+    flist
+        .iter()
+        .filter(|item| skip.contains(item))
+        .cloned()
+        .collect()
 }
 
 fn sig(st: os::StatResult) -> Signature {
@@ -310,6 +441,72 @@ mod tests {
         assert!(cmp(&foo_path, &bar_path, shallow).unwrap());
         assert!(!cmp(&foo_path, &baz_path, shallow).unwrap());
         assert!(!cmp(&bar_path, &baz_path, shallow).unwrap());
+
+        td.close().unwrap();
+    }
+
+    fn get_sorted_names(v: &Vec<PathBuf>) -> Vec<&str> {
+        let mut lst = v
+            .iter()
+            .map(|pbuf| pbuf.file_name().unwrap().to_str().unwrap())
+            .collect::<Vec<_>>();
+        lst.sort();
+        lst
+    }
+
+    #[test]
+    fn test_dircmp() {
+        let td = tempfile::tempdir().unwrap();
+        let temp_dir = td.path().to_path_buf();
+        let dir = create_and_verify(&temp_dir, "dir");
+        let dir_same = create_and_verify(&temp_dir, "dir_same");
+        let dir_diff = create_and_verify(&temp_dir, "dir_diff");
+        // Another dir is created under dir_same, but it has a name from the
+        // ignored list so it should not affect testing results.
+        let dir_ignored = create_and_verify(&dir_same, ".git");
+
+        {
+            let data = "Contents of file go here.\n";
+            let dirs = vec![
+                dir.clone(),
+                dir_same.clone(),
+                dir_diff.clone(),
+                dir_ignored.clone(),
+            ];
+            let name_d = "subdir";
+            let name_f = "file";
+            for d in dirs {
+                std::fs::create_dir(d.join(&name_d)).unwrap();
+                let fp = d.join(&name_f);
+                let mut f = File::create(&fp).unwrap();
+                write!(f, "{}", data).expect("write failed");
+            }
+            let data2 = "An extra file.\n";
+            let fp = dir_diff.join("file2");
+            let mut f = File::create(&fp).unwrap();
+            write!(f, "{}", data2).expect("write failed");
+        }
+
+        // Check attributes for comparison of two identical directories
+        let left_dir = dir.clone();
+        let right_dir = dir_same.clone();
+        let result = DirCmp::new(left_dir.clone(), right_dir.clone());
+        assert_eq!(result.left, left_dir);
+        assert_eq!(result.right, right_dir);
+        assert_eq!(get_sorted_names(&result.left_list), vec!["file", "subdir"]);
+        assert_eq!(get_sorted_names(&result.right_list), vec!["file", "subdir"]);
+        let mut result_common = result.common;
+        result_common.sort();
+        assert_eq!(result_common, vec!["file", "subdir"]);
+        let mut result_left_only = result.left_only;
+        result_left_only.sort();
+        assert_eq!(result_left_only, Vec::<String>::new());
+        let mut result_right_only = result.right_only;
+        result_right_only.sort();
+        assert_eq!(result_right_only, Vec::<String>::new());
+        let mut result_common_dirs = result.common_dirs;
+        result_common_dirs.sort();
+        assert_eq!(result_common_dirs, vec!["subdir"]);
 
         td.close().unwrap();
     }
