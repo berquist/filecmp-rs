@@ -23,6 +23,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
+use stat::{S_IFMT, S_ISDIR, S_ISFIFO, S_ISREG};
 
 const BUFSIZE: usize = 8 * 1024;
 const FOLLOW_SYMLINKS_DEFAULT: bool = true;
@@ -195,8 +196,8 @@ pub struct DirCmp {
     left_only: Vec<String>,
     right_only: Vec<String>,
     common_dirs: Vec<String>,
-    // common_files: Vec<PathBuf>,
-    // common_funny: Vec<PathBuf>,
+    common_files: Vec<String>,
+    common_funny: Vec<String>,
     // same_files: Vec<PathBuf>,
     // diff_files: Vec<PathBuf>,
     // funny_files: Vec<PathBuf>,
@@ -271,18 +272,32 @@ impl DirCmp {
             .filter(|name| !common.contains(name))
             .map(|n| n.clone())
             .collect::<Vec<_>>();
-        // for x in &common {
-        //     let a_path = left.join(x);
-        // }
-        // let stats_left = left_list_full
-        //     .iter()
-        //     .map(|pb| os::stat(pb.as_ref(), FOLLOW_SYMLINKS_DEFAULT).unwrap())
-        //     .collect::<Vec<_>>();
-        let common_dirs = common
-            .iter()
-            .filter(|name| left.join(name).is_dir() && right.join(name).is_dir())
-            .map(|n| n.clone())
-            .collect::<Vec<_>>();
+        let mut common_dirs = Vec::new();
+        let mut common_files = Vec::new();
+        let mut common_funny = Vec::new();
+        for x in &common {
+            match (
+                os::stat(&left.join(x), FOLLOW_SYMLINKS_DEFAULT),
+                os::stat(&right.join(x), FOLLOW_SYMLINKS_DEFAULT),
+            ) {
+                (Ok(left_stat), Ok(right_stat)) => {
+                    let left_type = S_IFMT(left_stat.st_mode);
+                    let right_type = S_IFMT(right_stat.st_mode);
+                    if left_type != right_type {
+                        common_funny.push(x.clone());
+                    } else if S_ISDIR(left_type) {
+                        common_dirs.push(x.clone());
+                    } else if S_ISREG(left_type) {
+                        common_files.push(x.clone());
+                    } else {
+                        common_funny.push(x.clone());
+                    }
+                }
+                _ => {
+                    common_funny.push(x.clone());
+                }
+            }
+        }
         DirCmp {
             left,
             right,
@@ -294,6 +309,8 @@ impl DirCmp {
             left_only,
             right_only,
             common_dirs,
+            common_files,
+            common_funny,
         }
     }
 
