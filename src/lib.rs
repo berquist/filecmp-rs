@@ -198,9 +198,9 @@ pub struct DirCmp {
     common_dirs: Vec<String>,
     common_files: Vec<String>,
     common_funny: Vec<String>,
-    // same_files: Vec<PathBuf>,
-    // diff_files: Vec<PathBuf>,
-    // funny_files: Vec<PathBuf>,
+    same_files: Vec<String>,
+    diff_files: Vec<String>,
+    funny_files: Vec<String>,
     // subdirs: Vec<PathBuf>,
 }
 
@@ -311,6 +311,9 @@ impl DirCmp {
             common_dirs,
             common_files,
             common_funny,
+            same_files: Vec::new(),
+            diff_files: Vec::new(),
+            funny_files: Vec::new(),
         }
     }
 
