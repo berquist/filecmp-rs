@@ -447,7 +447,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stat() {
+    fn test_cmp() {
         let td = tempfile::tempdir().unwrap();
         let temp_dir = td.path().to_path_buf();
         let test_dir = temp_dir.join("test_filecmp");
