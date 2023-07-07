@@ -16,7 +16,7 @@ mod os;
 mod stat;
 
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{rename, File};
 use std::hash::{Hash, Hasher};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -582,15 +582,97 @@ mod tests {
         let mut result_common = result.common;
         result_common.sort();
         assert_eq!(result_common, vec!["file", "subdir"]);
+        let mut result_common_dirs = result.common_dirs;
+        result_common_dirs.sort();
+        assert_eq!(result_common_dirs, vec!["subdir"]);
         let mut result_left_only = result.left_only;
         result_left_only.sort();
         assert_eq!(result_left_only, Vec::<String>::new());
         let mut result_right_only = result.right_only;
         result_right_only.sort();
         assert_eq!(result_right_only, Vec::<String>::new());
+        let mut result_same_files = result.same_files;
+        result_same_files.sort();
+        assert_eq!(result_same_files, vec!["file"]);
+        let mut result_diff_files = result.diff_files;
+        result_diff_files.sort();
+        assert_eq!(result_diff_files, Vec::<String>::new());
+
+        // Check attributes for comparison of two different directories (right)
+        let left_dir = dir.clone();
+        let right_dir = dir_diff.clone();
+        let result = DirCmp::new(left_dir.clone(), right_dir.clone());
+        assert_eq!(result.left, left_dir);
+        assert_eq!(result.right, right_dir);
+        assert_eq!(get_sorted_names(&result.left_list), vec!["file", "subdir"]);
+        assert_eq!(
+            get_sorted_names(&result.right_list),
+            vec!["file", "file2", "subdir"]
+        );
+        let mut result_common = result.common;
+        result_common.sort();
+        assert_eq!(result_common, vec!["file", "subdir"]);
         let mut result_common_dirs = result.common_dirs;
         result_common_dirs.sort();
         assert_eq!(result_common_dirs, vec!["subdir"]);
+        let mut result_left_only = result.left_only;
+        result_left_only.sort();
+        assert_eq!(result_left_only, Vec::<String>::new());
+        let mut result_right_only = result.right_only;
+        result_right_only.sort();
+        assert_eq!(result_right_only, vec!["file2"]);
+        let mut result_same_files = result.same_files;
+        result_same_files.sort();
+        assert_eq!(result_same_files, vec!["file"]);
+        let mut result_diff_files = result.diff_files;
+        result_diff_files.sort();
+        assert_eq!(result_diff_files, Vec::<String>::new());
+
+        // Check attributes for comparison of two different directories (left)
+        let left_dir = dir.clone();
+        let right_dir = dir_diff.clone();
+        rename(dir_diff.join("file2"), dir.join("file2")).expect("file2 move failed");
+        let result = DirCmp::new(left_dir.clone(), right_dir.clone());
+        assert_eq!(result.left, left_dir);
+        assert_eq!(result.right, right_dir);
+        assert_eq!(
+            get_sorted_names(&result.left_list),
+            vec!["file", "file2", "subdir"]
+        );
+        assert_eq!(get_sorted_names(&result.right_list), vec!["file", "subdir"]);
+        let mut result_common = result.common;
+        result_common.sort();
+        assert_eq!(result_common, vec!["file", "subdir"]);
+        let mut result_common_dirs = result.common_dirs;
+        result_common_dirs.sort();
+        assert_eq!(result_common_dirs, vec!["subdir"]);
+        let mut result_left_only = result.left_only;
+        result_left_only.sort();
+        assert_eq!(result_left_only, vec!["file2"]);
+        let mut result_right_only = result.right_only;
+        result_right_only.sort();
+        assert_eq!(result_right_only, Vec::<String>::new());
+        let mut result_same_files = result.same_files;
+        result_same_files.sort();
+        assert_eq!(result_same_files, vec!["file"]);
+        let mut result_diff_files = result.diff_files;
+        result_diff_files.sort();
+        assert_eq!(result_diff_files, Vec::<String>::new());
+
+        // Add different file2
+        {
+            let fp = dir_diff.join("file2");
+            let mut f = File::create(&fp).unwrap();
+            write!(f, "{}", "Different contents.\n").expect("write failed");
+        }
+
+        let result = DirCmp::new(dir.clone(), dir_diff.clone());
+        let mut result_same_files = result.same_files;
+        result_same_files.sort();
+        assert_eq!(result_same_files, vec!["file"]);
+        let mut result_diff_files = result.diff_files;
+        result_diff_files.sort();
+        assert_eq!(result_diff_files, vec!["file2"]);
 
         td.close().unwrap();
     }
