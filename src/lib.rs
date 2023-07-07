@@ -200,8 +200,8 @@ where
 pub struct DirCmp {
     left: PathBuf,
     right: PathBuf,
-    // hide: Vec<PathBuf>,
-    // ignore: Vec<PathBuf>,
+    hide: Vec<String>,
+    ignore: Vec<String>,
     left_list: Vec<PathBuf>,
     right_list: Vec<PathBuf>,
     common: Vec<String>,
@@ -220,45 +220,69 @@ impl DirCmp {
     pub fn new(
         left: impl AsRef<Path>,
         right: impl AsRef<Path>,
-        // ignore: Option<Vec<String>>,
-        // hide: Option<Vec<String>>,
+        ignore: Option<Vec<String>>,
+        hide: Option<Vec<String>>,
     ) -> Self {
         let left = left.as_ref().to_path_buf();
         let right = right.as_ref().to_path_buf();
-        // let ignore = if ignore.is_some() {
-        //     ignore.unwrap().iter().map(|x| PathBuf::from(x)).collect()
-        // } else {
-        //     DEFAULT_IGNORES.iter().map(|&x| PathBuf::from(x)).collect()
-        // };
-        // let hide = if hide.is_some() {
-        //     hide.unwrap().iter().map(|x| PathBuf::from(x)).collect()
-        // } else {
-        //     vec![CURDIR, PARDIR]
-        //         .iter()
-        //         .map(|&x| PathBuf::from(x))
-        //         .collect()
-        // };
-        // let ignore = DEFAULT_IGNORES.iter().map(|&x| PathBuf::from(x)).collect();
-        // let hide = vec![CURDIR, PARDIR]
-        //     .iter()
-        //     .map(|&x| PathBuf::from(x))
-        //     .collect();
-        let ignore = DEFAULT_IGNORES.iter().map(|&x| x).collect::<Vec<_>>();
-        let hide = vec![CURDIR, PARDIR];
+        let ignore = if let Some(ignore) = ignore {
+            ignore
+        } else {
+            DEFAULT_IGNORES
+                .iter()
+                .map(|&x| String::from(x))
+                .collect::<Vec<_>>()
+        };
+        let hide = if let Some(hide) = hide {
+            hide
+        } else {
+            vec![CURDIR, PARDIR]
+                .iter()
+                .map(|&x| String::from(x))
+                .collect::<Vec<_>>()
+        };
         let mut left_list_full: Vec<_> = left
             .read_dir()
             .unwrap()
             .map(|der| der.unwrap().path())
-            .filter(|der| !ignore.contains(der.file_name().unwrap().to_str().as_ref().unwrap()))
-            .filter(|der| !hide.contains(der.file_name().unwrap().to_str().as_ref().unwrap()))
+            .filter(|der| {
+                !ignore.contains(&String::from(
+                    der.file_name()
+                        .expect("failed to read OsStr")
+                        .to_str()
+                        .expect("failed to convert to string slice"),
+                ))
+            })
+            .filter(|der| {
+                !hide.contains(&String::from(
+                    der.file_name()
+                        .expect("failed to read OsStr")
+                        .to_str()
+                        .expect("failed to convert to string slice"),
+                ))
+            })
             .collect();
         left_list_full.sort();
         let mut right_list_full: Vec<_> = right
             .read_dir()
             .unwrap()
             .map(|der| der.unwrap().path())
-            .filter(|der| !ignore.contains(der.file_name().unwrap().to_str().as_ref().unwrap()))
-            .filter(|der| !hide.contains(der.file_name().unwrap().to_str().as_ref().unwrap()))
+            .filter(|der| {
+                !ignore.contains(&String::from(
+                    der.file_name()
+                        .expect("failed to read OsStr")
+                        .to_str()
+                        .expect("failed to convert to string slice"),
+                ))
+            })
+            .filter(|der| {
+                !hide.contains(&String::from(
+                    der.file_name()
+                        .expect("failed to read OsStr")
+                        .to_str()
+                        .expect("failed to convert to string slice"),
+                ))
+            })
             .collect();
         right_list_full.sort();
         let left_names = left_list_full
@@ -326,8 +350,8 @@ impl DirCmp {
         DirCmp {
             left,
             right,
-            // hide,
-            // ignore,
+            hide,
+            ignore,
             left_list: left_list_full,
             right_list: right_list_full,
             common,
@@ -574,7 +598,7 @@ mod tests {
         // Check attributes for comparison of two identical directories
         let left_dir = dir.clone();
         let right_dir = dir_same.clone();
-        let result = DirCmp::new(left_dir.clone(), right_dir.clone());
+        let result = DirCmp::new(left_dir.clone(), right_dir.clone(), None, None);
         assert_eq!(result.left, left_dir);
         assert_eq!(result.right, right_dir);
         assert_eq!(get_sorted_names(&result.left_list), vec!["file", "subdir"]);
@@ -601,7 +625,7 @@ mod tests {
         // Check attributes for comparison of two different directories (right)
         let left_dir = dir.clone();
         let right_dir = dir_diff.clone();
-        let result = DirCmp::new(left_dir.clone(), right_dir.clone());
+        let result = DirCmp::new(left_dir.clone(), right_dir.clone(), None, None);
         assert_eq!(result.left, left_dir);
         assert_eq!(result.right, right_dir);
         assert_eq!(get_sorted_names(&result.left_list), vec!["file", "subdir"]);
@@ -632,7 +656,7 @@ mod tests {
         let left_dir = dir.clone();
         let right_dir = dir_diff.clone();
         rename(dir_diff.join("file2"), dir.join("file2")).expect("file2 move failed");
-        let result = DirCmp::new(left_dir.clone(), right_dir.clone());
+        let result = DirCmp::new(left_dir.clone(), right_dir.clone(), None, None);
         assert_eq!(result.left, left_dir);
         assert_eq!(result.right, right_dir);
         assert_eq!(
@@ -666,7 +690,7 @@ mod tests {
             write!(f, "{}", "Different contents.\n").expect("write failed");
         }
 
-        let result = DirCmp::new(dir.clone(), dir_diff.clone());
+        let result = DirCmp::new(dir.clone(), dir_diff.clone(), None, None);
         let mut result_same_files = result.same_files;
         result_same_files.sort();
         assert_eq!(result_same_files, vec!["file"]);

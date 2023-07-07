@@ -37,7 +37,7 @@ fn main() {
     let a = matches.value_of("folder_a").unwrap();
     let b = matches.value_of("folder_b").unwrap();
 
-    let dd = DirCmp::new(a, b);
+    let dd = DirCmp::new(a, b, None, None);
     if is_recur {
         dd.report_full_closure();
     } else {
