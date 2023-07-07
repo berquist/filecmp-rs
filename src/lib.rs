@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
-use stat::{S_IFMT, S_ISDIR, S_ISFIFO, S_ISREG};
+use stat::{S_IFMT, S_ISDIR, S_ISREG};
 
 const BUFSIZE: usize = 8 * 1024;
 const FOLLOW_SYMLINKS_DEFAULT: bool = true;
