@@ -310,6 +310,19 @@ impl DirCmp {
                 }
             }
         }
+        let xx = cmpfiles(&left, &right, &common_files, true).unwrap();
+        let same_files =
+            xx.0.iter()
+                .map(|pb| pb.clone().into_os_string().into_string().unwrap())
+                .collect();
+        let diff_files =
+            xx.1.iter()
+                .map(|pb| pb.clone().into_os_string().into_string().unwrap())
+                .collect();
+        let funny_files =
+            xx.2.iter()
+                .map(|pb| pb.clone().into_os_string().into_string().unwrap())
+                .collect();
         DirCmp {
             left,
             right,
@@ -323,9 +336,9 @@ impl DirCmp {
             common_dirs,
             common_files,
             common_funny,
-            same_files: Vec::new(),
-            diff_files: Vec::new(),
-            funny_files: Vec::new(),
+            same_files,
+            diff_files,
+            funny_files,
         }
     }
 
