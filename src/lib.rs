@@ -532,6 +532,45 @@ mod tests {
             write!(f, "{}", data2).expect("write failed");
         }
 
+        assert_eq!(
+            cmpfiles(&dir, &dir, vec![PathBuf::from("file")], true).unwrap(),
+            (vec![PathBuf::from("file")], vec![], vec![])
+        );
+        assert_eq!(
+            cmpfiles(&dir, &dir_same, vec![PathBuf::from("file")], true).unwrap(),
+            (vec![PathBuf::from("file")], vec![], vec![])
+        );
+        // Try it with shallow=False
+        assert_eq!(
+            cmpfiles(&dir, &dir, vec![PathBuf::from("file")], false).unwrap(),
+            (vec![PathBuf::from("file")], vec![], vec![])
+        );
+        assert_eq!(
+            cmpfiles(&dir, &dir_same, vec![PathBuf::from("file")], false).unwrap(),
+            (vec![PathBuf::from("file")], vec![], vec![])
+        );
+        // Add different file2
+        {
+            let fp = dir.join("file2");
+            let mut f = File::create(&fp).unwrap();
+            write!(f, "{}", "Different contents.\n").expect("write failed");
+            assert_eq!(
+                cmpfiles(
+                    &dir,
+                    &dir_diff,
+                    vec![PathBuf::from("file"), PathBuf::from("file2")],
+                    true
+                )
+                .unwrap(),
+                (
+                    vec![PathBuf::from("file")],
+                    vec![PathBuf::from("file2")],
+                    vec![]
+                )
+            );
+            fs::remove_file(fp).expect("rm failed");
+        }
+
         // Check attributes for comparison of two identical directories
         let left_dir = dir.clone();
         let right_dir = dir_same.clone();
