@@ -132,7 +132,7 @@ pub fn cmp(f1: impl AsRef<Path>, f2: impl AsRef<Path>, shallow: bool) -> io::Res
     Ok(outcome)
 }
 
-/// Compare common files in two directories. (WIP)
+/// Compare common files in two directories.
 ///
 /// Arguments:
 ///  - dir1 -- First directory name
@@ -145,10 +145,10 @@ pub fn cmp(f1: impl AsRef<Path>, f2: impl AsRef<Path>, shallow: bool) -> io::Res
 ///  - filepaths that are different
 ///  - filepaths that aren't regular files.
 pub fn cmpfiles<A, B, C, D>(
-    _dir1: A,
-    _dir2: B,
-    _common: D,
-    _shallow: bool,
+    dir1: A,
+    dir2: B,
+    common: D,
+    shallow: bool,
 ) -> io::Result<(Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>)>
 where
     A: AsRef<Path>,
@@ -156,7 +156,19 @@ where
     C: AsRef<Path>,
     D: AsRef<[C]>,
 {
-    unimplemented!() // TODO
+    let mut same = Vec::new();
+    let mut diff = Vec::new();
+    let mut funny = Vec::new();
+    for x in common.as_ref().iter() {
+        let ax = dir1.as_ref().join(x);
+        let bx = dir2.as_ref().join(x);
+        match cmp(&ax, &bx, shallow) {
+            Ok(true) => same.push(x.as_ref().to_path_buf()),
+            Ok(false) => diff.push(x.as_ref().to_path_buf()),
+            Err(_) => funny.push(x.as_ref().to_path_buf()),
+        }
+    }
+    Ok((same, diff, funny))
 }
 
 /// A struct that manages the comparison of 2 directories.
